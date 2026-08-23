@@ -1,101 +1,130 @@
-// Product class
-class Computer {
-    private String CPU;
-    private String RAM;
-    private String storage;
-    private String GPU;
-    private boolean hasWiFi;
-    private boolean hasBluetoooth;
+class User {
 
-    // Private constructor - only Builder can call it
-    private Computer(ComputerBuilder builder) {
-        this.CPU = builder.CPU;
-        this.RAM = builder.RAM;
-        this.storage = builder.storage;
-        this.GPU = builder.GPU;
-        this.hasWiFi = builder.hasWiFi;
-        this.hasBluetoooth = builder.hasBluetoooth;
+    // Properties
+    private String name;
+    private int age;
+    private String email;
+    private String phone;
+    private String address;
+
+    // Private constructor
+    private User(Builder builder) {
+
+        this.name = builder.name;
+        this.age = builder.age;
+        this.email = builder.email;
+        this.phone = builder.phone;
+        this.address = builder.address;
     }
 
-    // Display computer specs
-    public void displaySpecs() {
-        System.out.println("Computer Specs:");
-        System.out.println("CPU: " + CPU);
-        System.out.println("RAM: " + RAM);
-        System.out.println("Storage: " + storage);
-        System.out.println("GPU: " + GPU);
-        System.out.println("WiFi: " + hasWiFi);
-        System.out.println("Bluetooth: " + hasBluetoooth);
+    // Getters
+    public String getName() {
+        return name;
     }
 
-    // Static Builder class
-    public static class ComputerBuilder {
-        private String CPU;
-        private String RAM;
-        private String storage;
-        private String GPU;
-        private boolean hasWiFi;
-        private boolean hasBluetoooth;
+    public int getAge() {
+        return age;
+    }
 
-        // Required parameters
-        public ComputerBuilder(String CPU, String RAM) {
-            this.CPU = CPU;
-            this.RAM = RAM;
-        }
+    public String getEmail() {
+        return email;
+    }
 
-        // Optional parameters
-        public ComputerBuilder storage(String storage) {
-            this.storage = storage;
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+
+    // Builder class
+    public static class Builder {
+
+        private String name;
+        private int age;
+        private String email;
+        private String phone;
+        private String address;
+
+
+        public Builder name(String name) {
+            this.name = name;
             return this;
         }
 
-        public ComputerBuilder GPU(String GPU) {
-            this.GPU = GPU;
+
+        public Builder age(int age) {
+            this.age = age;
             return this;
         }
 
-        public ComputerBuilder WiFi(boolean hasWiFi) {
-            this.hasWiFi = hasWiFi;
+
+        public Builder email(String email) {
+            this.email = email;
             return this;
         }
 
-        public ComputerBuilder Bluetooth(boolean hasBluetoooth) {
-            this.hasBluetoooth = hasBluetoooth;
+
+        public Builder phone(String phone) {
+            this.phone = phone;
             return this;
         }
 
-        // Build method to create Computer object
-        public Computer build() {
-            return new Computer(this);
+
+        public Builder address(String address) {
+            this.address = address;
+            return this;
+        }
+
+
+        public User build() {
+            return new User(this);
         }
     }
 }
 
-// Main / Client
-class BuilderDemo {
+// Main / Client - Display User information
+class UserDemo {
     public static void main(String[] args) {
-        // Example 1: Basic Gaming Computer
-        System.out.println("=== Gaming Computer ===");
-        Computer gamingPC = new Computer.ComputerBuilder("Intel i9", "32GB")
-                .storage("1TB SSD")
-                .GPU("RTX 4090")
-                .WiFi(true)
-                .Bluetooth(true)
+        
+        // Example 1: Complete User Profile
+        System.out.println("=== User 1: Complete Profile ===");
+        User user1 = new User.Builder()
+                .name("John Doe")
+                .age(30)
+                .email("john@example.com")
+                .phone("123-456-7890")
+                .address("123 Main St, New York")
                 .build();
-        gamingPC.displaySpecs();
+        
+        displayUser(user1);
 
-        System.out.println("\n=== Office Computer ===");
-        // Example 2: Basic Office Computer
-        Computer officePC = new Computer.ComputerBuilder("Intel i5", "8GB")
-                .storage("256GB SSD")
-                .WiFi(true)
+        System.out.println("\n=== User 2: Partial Profile ===");
+        // Example 2: Partial User Profile (only name and email)
+        User user2 = new User.Builder()
+                .name("Jane Smith")
+                .email("jane@example.com")
                 .build();
-        officePC.displaySpecs();
+        
+        displayUser(user2);
 
-        System.out.println("\n=== Minimal Computer ===");
-        // Example 3: Minimal Computer with only required fields
-        Computer minimalPC = new Computer.ComputerBuilder("Intel i3", "4GB")
+        System.out.println("\n=== User 3: Minimal Profile ===");
+        // Example 3: Minimal User Profile (only name)
+        User user3 = new User.Builder()
+                .name("Bob Johnson")
                 .build();
-        minimalPC.displaySpecs();
+        
+        displayUser(user3);
+    }
+
+    // Helper method to display user details
+    public static void displayUser(User user) {
+        System.out.println("Name: " + user.getName());
+        System.out.println("Age: " + (user.getAge() == 0 ? "Not provided" : user.getAge()));
+        System.out.println("Email: " + (user.getEmail() == null ? "Not provided" : user.getEmail()));
+        System.out.println("Phone: " + (user.getPhone() == null ? "Not provided" : user.getPhone()));
+        System.out.println("Address: " + (user.getAddress() == null ? "Not provided" : user.getAddress()));
     }
 }
