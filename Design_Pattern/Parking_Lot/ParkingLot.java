@@ -126,6 +126,7 @@ final class ParkingFloor {
         if (floorNumber < 1 || motorcycleSpotCount < 0 || compactSpotCount < 0 || largeSpotCount < 0) {
             throw new IllegalArgumentException("Floor number must be positive and spot counts cannot be negative");
         }
+        this.floorNumber = floorNumber;
         addSpots(SpotType.MOTORCYCLE, motorcycleSpotCount, "M");
         addSpots(SpotType.COMPACT, compactSpotCount, "C");
         addSpots(SpotType.LARGE, largeSpotCount, "L");
