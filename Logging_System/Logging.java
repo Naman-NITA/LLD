@@ -139,7 +139,6 @@ class LoggerConfig{
         this.logLevel = logLevel;
         this.logAppender = logAppender;
     }
-
     public LogLevel getLogLevel(){
         return logLevel;
     }
@@ -154,69 +153,64 @@ class LoggerConfig{
     }
 }
 
-class Logger{
-    private static final ConcurrentHashMap<String,Logger>loggers = new ConcurrentHashMap<>();
-    private volatile LoggerConfig loggerConfig;
-    private LogHandler logChain;
+class Logger {
+    private static final ConcurrentHashMap<String, Logger> instances = new ConcurrentHashMap<>();
+                                                 // static = one map shared by the whole program; stores created Loggers
+    private volatile LoggerConfig config;        // FIX: volatile = every thread sees the newest config at once
 
-    private Logger(LogLevel logLevel,LogAppender logAppender){
-        this.loggerConfig = new LoggerConfig(logLevel,logAppender);
-        // Build one chain: DEBUG -> INFO -> ERROR.
-        LogHandler debug = new DebugLogger(LogLevel.DEBUG,logAppender);
-        LogHandler info = new InfoLogger(LogLevel.INFO,logAppender);
-        LogHandler error = new ErrorLogger(LogLevel.ERROR,logAppender);
-        debug.setNextHandler(info);
-        info.setNextHandler(error);
-        this.logChain = debug;
+    private Logger(LogLevel logLevel, LogAppender logAppender) {   // PRIVATE: outside code cannot call "new Logger"
+        config = new LoggerConfig(logLevel, logAppender);          // start with the given settings
     }
 
-    public static Logger getLogger(LogLevel logLevel,LogAppender  logAppender){
-        String key = logLevel.name() + "_" + logAppender.getClass().getName();
-        return loggers.computeIfAbsent(key,k-> new Logger(logLevel,logAppender));
+    public static Logger getInstance(LogLevel logLevel, LogAppender logAppender) {  // the only door to get a Logger
+        String key = logLevel.name() + "_" + logAppender.getClass().getName();      // e.g. "INFO_ConsoleAppender"
+        return instances.computeIfAbsent(key, k -> new Logger(logLevel, logAppender));
+                                                 // "if key missing, create + store, else return stored" (thread-safe)
     }
 
-    public void setLevel(LogLevel logLevel){
-        loggerConfig.setLogLevel(logLevel);
-    }
-
-    public void setAppender(LogAppender logAppender){
-        loggerConfig.setLogAppender(logAppender);
-
-        // Rebuild the chain so every level sends output to the new appender.
-        LogHandler debug = new DebugLogger(LogLevel.DEBUG,logAppender);
-        LogHandler info = new InfoLogger(LogLevel.INFO,logAppender);
-        LogHandler error = new ErrorLogger(LogLevel.ERROR,logAppender);
-        debug.setNextHandler(info);
-        info.setNextHandler(error);
-        this.logChain = debug;
-    }
-
-    // A message is logged only when it meets the configured minimum level.
-    private void log(LogLevel messageLevel,String message){
-        if(messageLevel.isGreaterOrEqual(loggerConfig.getLogLevel())){
-            logChain.logMessage(messageLevel,message);
+    public void setConfig(LoggerConfig config) {  // change settings while the program runs
+        synchronized (Logger.class) {             // lock so two threads don't change at the same time
+            this.config = config;                 // replace the old settings
         }
     }
 
-    public void debug(String message){
-        log(LogLevel.DEBUG,message);
+    public void log(LogLevel level, String message) {          // the main method
+        if (level.isGreaterOrEqual(config.getLogLevel())) {    // is this message important enough?
+            LogMessage logMessage = new LogMessage(level, message);  // yes: pack it
+            config.getLogAppender().append(logMessage);        // write it with the configured appender
+        }                                                      // no: do nothing (filtered out)
     }
 
-    public void info(String message){
-        log(LogLevel.INFO,message);
-    }
-
-    public void error(String message){
-        log(LogLevel.ERROR,message);
-    }
-
-    public static void main(String[] args){
-        Logger logger = Logger.getLogger(LogLevel.DEBUG,new ConsoleAppender());
-        logger.debug("Debug message");
-        logger.info("Application started");
-        logger.error("Application failed");
-    }
+    public void debug(String message) { log(LogLevel.DEBUG, message); }  // shortcut for DEBUG
+    public void info(String message)  { log(LogLevel.INFO, message); }   // shortcut for INFO
+    public void error(String message) { log(LogLevel.ERROR, message); }  // shortcut for ERROR
 }
 
+class Main {
+    private static LogHandler getChainOfLoggers(LogAppender appender) {  // builds the row of clerks
+        LogHandler errorLogger = new ErrorLogger(LogLevel.ERROR, appender);  // last clerk
+        LogHandler debugLogger = new DebugLogger(LogLevel.DEBUG, appender);  // middle clerk
+        LogHandler infoLogger  = new InfoLogger(LogLevel.INFO, appender);    // first clerk
+        infoLogger.setNextHandler(debugLogger);   // Info → Debug
+        debugLogger.setNextHandler(errorLogger);  // Debug → Error
+        return infoLogger;                       // give back the FIRST clerk (head of chain)
+    }
 
+    public static void main(String[] args) {     // program starts here
+        LogAppender consoleAppender = new ConsoleAppender();     // writes to screen
+        LogAppender fileAppender = new FileAppender("logs.txt"); // writes to logs.txt
+        LogHandler loggerChain = getChainOfLoggers(consoleAppender);  // build chain that uses the screen
 
+        System.out.println("Logging INFO level message:");        // heading so output is easy to read
+        loggerChain.logMessage(LogLevel.INFO, "This is an information.");       // goes to InfoLogger
+        System.out.println("\nLogging DEBUG level message:");     // FIX: "\n" = blank line (lost in your paste)
+        loggerChain.logMessage(LogLevel.DEBUG, "This is a debug level information.");  // passes 1 clerk
+        System.out.println("\nLogging ERROR level message:");
+        loggerChain.logMessage(LogLevel.ERROR, "This is an error information.");       // passes 2 clerks
+
+        System.out.println("\nUsing Singleton Logger:");
+        Logger logger = Logger.getInstance(LogLevel.INFO, consoleAppender);  // get the shared Logger
+        logger.setConfig(new LoggerConfig(LogLevel.INFO, fileAppender));     // switch it to write into the file
+        logger.error("Using singleton Logger - Error message");              // ERROR >= INFO → written to logs.txt
+    }
+}
